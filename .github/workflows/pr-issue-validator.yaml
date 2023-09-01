@@ -42,19 +42,22 @@ jobs:
           gh pr edit $PRNUM --add-label "PR:Ready-to-Review"
           exit 0
         fi
-        pattern="((Fixes|Resolves) #[0-9]+)"
-        
-        echo "pattern = $pattern"
+        pattern1="((Fixes|Resolves) #[0-9]+)"
+        pattern2="((Fixes|Resolves) https://github.com/devtron-labs/devtron/issues/[0-9]+)"
+        pattern3="((Fixes|Resolves) devtron-labs/devtron#[0-9]+)"
         
         # Get the pull request body
         PR_BODY=$(jq -r '.pull_request.body' $GITHUB_EVENT_PATH)
         
         echo "PR_BODY = $PR_BODY"
-        # shopt -s nocasematch
-        if echo "$PR_BODY" | grep -iEq "$pattern"; then
-        # if [[ "$PR_BODY" =~ "$pattern" ]]; then
-            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern" | head -n1 | grep -o -E "[0-9]+")
+        if echo "$PR_BODY" | grep -iEq "$pattern1"; then
+            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern1" | head -n1 | grep -o -E "[0-9]+")
             echo "issue_num is : $issue_num"
+        elif echo "$PR_BODY" | grep -iEq "$pattern2"; then
+            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern2" | head -n1 | awk -F '/' '{print $NF}')
+            echo "issue_num is : $issue_num"
+        elif echo "$PR_BODY" | grep -iEq "$pattern3"; then
+            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern2" | head -n1 | awk -F '#' '{print $NF}')
         else
             echo "No Issue number detected hence failing the PR Validation check."
             gh pr edit $PRNUM --add-label "PR:Issue-verification-failed"
