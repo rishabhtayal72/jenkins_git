@@ -62,13 +62,14 @@ jobs:
             exit 1
         fi
         
-        IFS="/" read -r -a url_parts <<< "$url"
+        # IFS="/" read -r -a url_parts <<< "$url"
         
-        # Remove the last two elements (repos and the issue number)
-        unset url_parts[-1]
-        unset url_parts[-1]
-        # Reattach the URL pieces
-        url=$(IFS=/; echo "${url_parts[*]}")
+        # # Remove the last two elements (repos and the issue number)
+        # unset url_parts[-1]
+        # unset url_parts[-1]
+        # # Reattach the URL pieces
+        # url=$(IFS=/; echo "${url_parts[*]}")
+        url=https://api.github.com/repos/rishabhtayal72/hello-world
 
         # Add the issue number to the URL
         url="${url}/issues/${issue_num}"
