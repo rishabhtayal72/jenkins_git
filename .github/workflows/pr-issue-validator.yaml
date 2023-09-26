@@ -65,17 +65,17 @@ jobs:
             ### Here we are taking only the numerical value ie. issue number
             ### head -n1 only prints the 1st line.
             ### grep -o -E "[0-9]+ basically outputs only the number between [0-9]+
-            export issue_num=$(echo "$PR_BODY" | grep -iE "$pattern1" | head -n1 | grep -o -E "[0-9]+")
+            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern1" | head -n1 | grep -o -E "[0-9]+")
             # echo issue_num=$issue_num
             echo "issue_num is : $issue_num"
         elif echo "$PR_BODY" | grep -iEq "$pattern2"; then
             echo "pattern 2 detected !"
-            export issue_num=$(echo "$PR_BODY" | grep -iE "$pattern2" | head -n1 | awk -F '/' '{print $NF}')
-            # issue_num=$issue_num
+            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern2" | head -n1 | awk -F '/' '{print $NF}')
+            echo $issue_num > issue_num
             echo "issue_num is : $issue_num"
         elif echo "$PR_BODY" | grep -iEq "$pattern3"; then
             echo "pattern 3 detected !"
-            export issue_num=$(echo "$PR_BODY" | grep -iE "$pattern3" | head -n1 | awk -F '#' '{print $NF}')
+            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern3" | head -n1 | awk -F '#' '{print $NF}')
             issue_num=$issue_num
             echo "issue_num is : $issue_num"
         else
@@ -87,8 +87,8 @@ jobs:
         ### hardcoding the url here to devtron repo as issues will always be created inside devtron repo.
         url=https://api.github.com/repos/rishabhtayal72/hello-world
         # Add the issue number to the URL
-        export url="${url}/issues/${issue_num}"
-        echo "$url"
+        url="${url}/issues/${issue_num}"
+        echo $url > url
         response_code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
         if [[ "$response_code" -eq 200 ]]; then
           # Check if issue is open or closed
