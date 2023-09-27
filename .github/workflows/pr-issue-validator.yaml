@@ -89,7 +89,8 @@ jobs:
         # Add the issue number to the URL
         url="${url}/issues/${issue_num}"
         echo $url > url
-        response_code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+        response_code=$(curl -s -o /dev/null -w "%{http_code}" `cat url`)
+        echo "response code is : $response_code"
         if [[ "$response_code" -eq 200 ]]; then
           # Check if issue is open or closed
           text=$(curl -s "$url")
