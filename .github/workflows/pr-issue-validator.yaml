@@ -70,8 +70,8 @@ jobs:
             echo "issue_num is : $issue_num"
         elif echo "$PR_BODY" | grep -iEq "$pattern2"; then
             echo "pattern 2 detected !"
-            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern2" | head -n1 | awk -F '/' '{print $NF}')
-            echo $issue_num > issue_num
+            export issue_num=$(echo "$PR_BODY" | grep -iE "$pattern2" | head -n1 | awk -F '/' '{print $NF}')
+            echo $issue_num
             echo "issue_num is : $issue_num"
         elif echo "$PR_BODY" | grep -iEq "$pattern3"; then
             echo "pattern 3 detected !"
@@ -87,10 +87,10 @@ jobs:
         ### hardcoding the url here to devtron repo as issues will always be created inside devtron repo.
         url=https://api.github.com/repos/rishabhtayal72/hello-world
         # Add the issue number to the URL
-        url="${url}/issues/${issue_num}"
-        echo $url > url
+        export url=${url}/issues/${issue_num}
+        echo $url
         # response_code=$(curl -s -o /dev/null -w "%{http_code}" `cat url`)
-        curl -s -o /dev/null -w "%{http_code}" `cat url` > response_code
+        curl -s -o /dev/null -w "%{http_code}" "$url" > response_code
         echo `cat response_code`
         # echo "response code is : $response_code"
         if [[ "$response_code" -eq 200 ]]; then
