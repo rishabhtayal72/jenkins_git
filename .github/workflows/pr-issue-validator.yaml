@@ -89,8 +89,8 @@ jobs:
         # Add the issue number to the URL
         export url=${url}/issues/${issue_num}
         echo $url
-        # response_code=$(curl -s -o /dev/null -w "%{http_code}" `cat url`)
-        curl -s -o /dev/null -w "%{http_code}" "$url" > response_code
+        response_code=$(curl -s -o /dev/null -w "%{http_code}" $url)
+        # curl -s -o /dev/null -w "%{http_code}" "$url" > response_code
         echo `cat response_code`
         # echo "response code is : $response_code"
         if [[ "$response_code" -eq 200 ]]; then
