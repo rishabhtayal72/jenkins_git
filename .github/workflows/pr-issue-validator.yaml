@@ -56,10 +56,12 @@ jobs:
         pattern3="((Fixes|Resolves) rishabhtayal72/hello-world#[0-9]+)"
         
         # Get the pull request body
-        jq -r '.pull_request.body' $GITHUB_EVENT_PATH > PR_BODY
-        PR_BODY_NEW=$(cat PR_BODY | grep -iE "(Fixes|Resolves)" | head -n1)
-        echo "PR_BODY_NEW is : ${PR_BODY_NEW}"
-        echo "PR_BODY = $PR_BODY"
+        jq -r '.pull_request.body' $GITHUB_EVENT_PATH | grep -iE "(Fixes|Resolves)" | head -n1 > PR_BODY
+        # cat PR_BODY | grep -iE "(Fixes|Resolves)" | head -n1 > PR_BODY_NEW
+        tr -d '\r\n' < PR_BODY > PR_BODY_NEW
+        PR_BODY_NEW=$(cat PR_BODY_NEW)
+        # echo "PR_BODY_NEW is : ${PR_BODY_NEW}"
+        # echo "PR_BODY = $PR_BODY"
         ### Checks if PR_BODY matches pattern1 or pattern2 or pattern3 or none
         ### grep -i (case insensitive) -E (enables extended regular expression in grep) -q (this option suppresses normal output)
         if echo "$PR_BODY_NEW" | grep -iEq "$pattern1"; then
