@@ -10,7 +10,6 @@ on:
     branches:    
       - 'main'
       - 'release-**'
-      - 'master'
     # paths-ignore:
     #   - 'docs/**'
     #   - '.github/'
@@ -50,52 +49,42 @@ jobs:
         pattern1="((Fixes|Resolves) #[0-9]+)"
         
         ### For ex: Resolves https://github.com/devtron-labs/devtron/issues/2123
-        pattern2="((Fixes|Resolves) https://github.com/rishabhtayal72/hello-world/issues/[0-9]+)"
+        pattern2="((Fixes|Resolves) https://github.com/devtron-labs/devtron/issues/[0-9]+)"
         
         ### For ex: Fixes devtron-labs/devtron#2123
-        pattern3="((Fixes|Resolves) rishabhtayal72/hello-world#[0-9]+)"
+        pattern3="((Fixes|Resolves) devtron-labs/devtron#[0-9]+)"
         
         # Get the pull request body
-        jq -r '.pull_request.body' $GITHUB_EVENT_PATH | grep -iE "(Fixes|Resolves)" | head -n1 > PR_BODY
-        # cat PR_BODY | grep -iE "(Fixes|Resolves)" | head -n1 > PR_BODY_NEW
-        tr -d '\r\n' < PR_BODY > PR_BODY_NEW
-        PR_BODY_NEW=$(cat PR_BODY_NEW)
-        # echo "PR_BODY_NEW is : ${PR_BODY_NEW}"
-        # echo "PR_BODY = $PR_BODY"
+        PR_BODY=$(jq -r '.pull_request.body' $GITHUB_EVENT_PATH)
+        echo "PR_BODY = $PR_BODY"
+
         ### Checks if PR_BODY matches pattern1 or pattern2 or pattern3 or none
         ### grep -i (case insensitive) -E (enables extended regular expression in grep) -q (this option suppresses normal output)
-        if echo "$PR_BODY_NEW" | grep -iEq "$pattern1"; then
-            echo "pattern 1 detected !"
+        if echo "$PR_BODY" | grep -iEq "$pattern1"; then
             ### Here we are taking only the numerical value ie. issue number
             ### head -n1 only prints the 1st line.
             ### grep -o -E "[0-9]+ basically outputs only the number between [0-9]+
-            issue_num=$(echo "$PR_BODY_NEW" | grep -iE "$pattern1" | head -n1 | grep -o -E "[0-9]+")
-            # echo issue_num=$issue_num
+            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern1" | head -n1 | grep -o -E "[0-9]+")
             echo "issue_num is : $issue_num"
-        elif echo "$PR_BODY_NEW" | grep -iEq "$pattern2"; then
-            echo "pattern 2 detected !"
-            export issue_num=$(echo -n "$PR_BODY_NEW" | grep -iE "$pattern2" | head -n1 | awk -F '/' '{print $NF}')
-            echo $issue_num
+        elif echo "$PR_BODY" | grep -iEq "$pattern2"; then
+            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern2" | head -n1 | awk -F '/' '{print $NF}')
             echo "issue_num is : $issue_num"
-        elif echo "$PR_BODY_NEW" | grep -iEq "$pattern3"; then
-            echo "pattern 3 detected !"
-            issue_num=$(echo "$PR_BODY_NEW" | grep -iE "$pattern3" | head -n1 | awk -F '#' '{print $NF}')
-            issue_num=$issue_num
-            echo "issue_num is : $issue_num"
+        elif echo "$PR_BODY" | grep -iEq "$pattern3"; then
+            issue_num=$(echo "$PR_BODY" | grep -iE "$pattern3" | head -n1 | awk -F '#' '{print $NF}')
         else
             echo "No Issue number detected hence failing the PR Validation check."
             gh pr edit $PRNUM --add-label "PR:Issue-verification-failed"
             gh pr edit $PRNUM --remove-label "PR:Ready-to-Review"
             exit 1
         fi
+
         ### hardcoding the url here to devtron repo as issues will always be created inside devtron repo.
-        url=https://api.github.com/repos/rishabhtayal72/hello-world
+        url=https://api.github.com/repos/devtron-labs/devtron
+
         # Add the issue number to the URL
-        export url=${url}/issues/${issue_num}
-        echo $url
-        response_code=$(curl -s -o /dev/null -w "%{http_code}" "https://api.github.com/repos/rishabhtayal72/hello-world/issues/$issue_num")
-        # curl -s -o /dev/null -w "%{http_code}" "$url" > response_code
-        echo "response code is : $response_code"
+        url="${url}/issues/${issue_num}"
+        echo "$url"
+        response_code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
         if [[ "$response_code" -eq 200 ]]; then
           # Check if issue is open or closed
           text=$(curl -s "$url")
