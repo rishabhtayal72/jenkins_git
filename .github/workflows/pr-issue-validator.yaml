@@ -72,7 +72,7 @@ jobs:
             echo "issue_num is : $issue_num"
         elif echo "$PR_BODY_NEW" | grep -iEq "$pattern2"; then
             echo "pattern 2 detected !"
-            export issue_num=$(echo "$PR_BODY_NEW" | grep -iE "$pattern2" | head -n1 | awk -F '/' '{print $NF}')
+            export issue_num=$(echo -n "$PR_BODY_NEW" | grep -iE "$pattern2" | head -n1 | awk -F '/' '{print $NF}')
             echo $issue_num
             echo "issue_num is : $issue_num"
         elif echo "$PR_BODY_NEW" | grep -iEq "$pattern3"; then
