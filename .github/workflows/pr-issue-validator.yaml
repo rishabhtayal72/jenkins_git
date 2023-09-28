@@ -56,7 +56,7 @@ jobs:
         pattern3="((Fixes|Resolves) rishabhtayal72/hello-world#[0-9]+)"
         
         # Get the pull request body
-        PR_BODY=$(jq -r '.pull_request.body' $GITHUB_EVENT_PATH)
+        export PR_BODY=$(jq -r '.pull_request.body' $GITHUB_EVENT_PATH)
         echo "PR_BODY = $PR_BODY"
         ### Checks if PR_BODY matches pattern1 or pattern2 or pattern3 or none
         ### grep -i (case insensitive) -E (enables extended regular expression in grep) -q (this option suppresses normal output)
