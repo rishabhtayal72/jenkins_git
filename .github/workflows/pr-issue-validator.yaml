@@ -60,7 +60,7 @@ jobs:
         echo "PR_BODY = $PR_BODY"
         ### Checks if PR_BODY matches pattern1 or pattern2 or pattern3 or none
         ### grep -i (case insensitive) -E (enables extended regular expression in grep) -q (this option suppresses normal output)
-        if [[ echo "$PR_BODY" | grep -iEq "$pattern1" ]]; then
+        if echo "$PR_BODY" | grep -iEq "$pattern1"; then
             echo "pattern 1 detected !"
             ### Here we are taking only the numerical value ie. issue number
             ### head -n1 only prints the 1st line.
@@ -68,12 +68,12 @@ jobs:
             issue_num=$(echo "$PR_BODY" | grep -iE "$pattern1" | head -n1 | grep -o -E "[0-9]+")
             # echo issue_num=$issue_num
             echo "issue_num is : $issue_num"
-        elif [[ echo "$PR_BODY" | grep -iEq "$pattern2" ]]; then
+        elif echo "$PR_BODY" | grep -iEq "$pattern2"; then
             echo "pattern 2 detected !"
             export issue_num=$(echo "$PR_BODY" | grep -iE "$pattern2" | head -n1 | awk -F '/' '{print $NF}')
             echo $issue_num
             echo "issue_num is : $issue_num"
-        elif [[ echo "$PR_BODY" | grep -iEq "$pattern3" ]]; then
+        elif echo "$PR_BODY" | grep -iEq "$pattern3"; then
             echo "pattern 3 detected !"
             issue_num=$(echo "$PR_BODY" | grep -iE "$pattern3" | head -n1 | awk -F '#' '{print $NF}')
             issue_num=$issue_num
