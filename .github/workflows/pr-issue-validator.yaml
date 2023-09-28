@@ -58,6 +58,7 @@ jobs:
         # Get the pull request body
         jq -r '.pull_request.body' $GITHUB_EVENT_PATH > PR_BODY
         PR_BODY_NEW=$(cat PR_BODY | grep -iE "(Fixes|Resolves)" | head -n1)
+        echo "PR_BODY_NEW is : ${PR_BODY_NEW}"
         echo "PR_BODY = $PR_BODY"
         ### Checks if PR_BODY matches pattern1 or pattern2 or pattern3 or none
         ### grep -i (case insensitive) -E (enables extended regular expression in grep) -q (this option suppresses normal output)
