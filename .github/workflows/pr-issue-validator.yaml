@@ -89,7 +89,7 @@ jobs:
         # Add the issue number to the URL
         export url=${url}/issues/${issue_num}
         echo $url
-        response_code=$(curl -s -o /dev/null -w "%{http_code}" "https://api.github.com/repos/rishabhtayal72/hello-world/issues/${issue_num}")
+        response_code=$(curl -s -o /dev/null -w "%{http_code}" "https://api.github.com/repos/rishabhtayal72/hello-world/issues/$issue_num")
         # curl -s -o /dev/null -w "%{http_code}" "$url" > response_code
         echo "response code is : $response_code"
         if [[ "$response_code" -eq 200 ]]; then
