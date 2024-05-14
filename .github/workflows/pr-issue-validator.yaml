@@ -26,9 +26,14 @@ jobs:
       issues: write
       contents: read
       pull-requests: write
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+
 
     - name: Validate Issue Reference
       env:
@@ -39,8 +44,20 @@ jobs:
         TITLE: ${{ github.event.pull_request.title }}
       run: |
         set -x
-        if [[ "$TITLE" == *"doc:"* || "$TITLE" == *"docs:"* || "$TITLE" == *"chore:"* ]]; then
-          echo "Skipping validation as this is a PR for documentation or chore."
+        echo "base or target repo : ${{ github.event.pull_request.base.repo.full_name }}"
+        echo "head or source repo : ${{ github.event.pull_request.head.repo.full_name }}"
+        if [[ ${{ github.event.pull_request.head.repo.full_name }} == ${{ github.event.pull_request.base.repo.full_name }} ]]; then
+          export forked=false
+        else
+          export forked=true
+        fi
+        echo "forked: $forked"
+        if [[ "$TITLE" == *"doc:"* || "$TITLE" == *"docs:"* || "$TITLE" == *"misc:"* || "$TITLE" == *"release:"* || "$TITLE" == *"Release:"*  ]]; then
+          echo "Skipping validation as this is a PR for documentation or misc."
+          if [[ $forked == true ]]; then
+            echo "PR:Ready-to-Review, exiting gracefully"
+            exit 0
+          fi
           gh pr edit $PRNUM --remove-label "PR:Issue-verification-failed"
           gh pr edit $PRNUM --add-label "PR:Ready-to-Review"
           exit 0
@@ -49,10 +66,10 @@ jobs:
         ### For ex: Fixes #2123
         pattern1="((Fixes|Resolves) #[0-9]+)"
         
-        ### For ex: Resolves https://github.com/devtron-labs/devtron/issues/2123
+        ### For ex: Resolves https://github.com/rishabhtayal72/hello-world/issues/2123
         pattern2="((Fixes|Resolves) https://github.com/rishabhtayal72/hello-world/issues/[0-9]+)"
         
-        ### For ex: Fixes devtron-labs/devtron#2123
+        ### For ex: Fixes rishabhtayal72/hello-world#2123
         pattern3="((Fixes|Resolves) rishabhtayal72/hello-world#[0-9]+)"
         
         # Get the pull request body
@@ -78,13 +95,25 @@ jobs:
             echo "issue_num is : $issue_num"
         else
             echo "No Issue number detected hence failing the PR Validation check."
+            if [[ $forked == true ]]; then
+              echo "PR:Issue-verification-failed, exiting forcefully!"
+              exit 1
+            fi
             gh pr edit $PRNUM --add-label "PR:Issue-verification-failed"
             gh pr edit $PRNUM --remove-label "PR:Ready-to-Review"
             exit 1
         fi
 
-        ### hardcoding the url here to devtron repo as issues will always be created inside devtron repo.
-        url=https://api.github.com/repos/rishabhtayal72/hello-world
+        ### Here we are setting the Internal Field Separator to "/"
+        ### read -r -> reads input from variable $url
+        ### -a url_parts -> tells read command to store input into an array named url_parts[]
+        IFS="/" read -r -a url_parts <<< "$url"
+        
+        # Remove the last two elements (repos and the issue number)
+        unset url_parts[-1]
+        unset url_parts[-1]
+        # Reattach the URL pieces
+        url=$(IFS=/; echo "${url_parts[*]}")
 
         # Add the issue number to the URL
         url="${url}/issues/${issue_num}"
@@ -94,22 +123,115 @@ jobs:
           # Check if issue is open or closed
           text=$(curl -s "$url")
           echo "checking status of the issue"
-          # Skipping this condition as the Issue can be in closed state as BE PRs are merged before FE
-          # if [[ $(echo "$text" | jq -r '.state') == "open" ]]; then
+          if [[ $(echo "$text" | jq -r '.state') == "open" ]]; then
             echo "Issue #$issue_num is open"
             echo "Issue reference found in the pull request body."
+            if [[ $forked == true ]]; then
+              echo "PR:Ready-to-Review, exiting gracefully"
+              exit 0
+            fi
             gh pr edit $PRNUM --remove-label "PR:Issue-verification-failed"
             gh pr edit $PRNUM --add-label "PR:Ready-to-Review"
             exit 0
-          # else
-          #   echo "Issue #$issue_num is not open"
-          #   exit 1
-          # fi
+          else
+            echo "Issue #$issue_num is not open"
+            if [[ $forked == true ]]; then
+              echo "PR:Issue-verification-failed, exiting forcefully!"
+              exit 1
+            fi
+            gh pr edit $PRNUM --add-label "PR:Issue-verification-failed"
+            gh pr edit $PRNUM --remove-label "PR:Ready-to-Review"
+            exit 1
+          fi
         else
             echo "Invalid Response Code obtained - error code: $response_code"
             echo "No valid issue reference found in the pull request body."
             gh pr comment $PRNUM --body "PR is not linked to any issue, please make the corresponding changes in the body."
+            if [[ $forked == true ]]; then
+              echo "PR:Issue-verification-failed, exiting forcefully!"
+              exit 1
+            fi
             gh pr edit $PRNUM --add-label "PR:Issue-verification-failed"
             gh pr edit $PRNUM --remove-label "PR:Ready-to-Review"
             exit 1
         fi
+    - name: Check SQL file format and duplicates
+      shell: bash
+      env: 
+          pr_no: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+      run: |
+        
+        # Fetch the latest changes from the main branch
+        git fetch origin main
+
+        # Get the list of changed files
+        git diff origin/main...HEAD --name-only > diff
+
+        echo "Changed files:"
+        cat diff
+
+        echo "Changed SQL files-:"
+        # Filter SQL files from the list of changed files
+        awk '/scripts\/sql\//' diff
+
+        # Count the number of changed SQL files in the 'scripts/sql' directory
+        count=$(awk '/scripts\/sql\//' diff | wc -l)
+
+        # Check if no SQL files were changed
+        if [[ $count == "0" ]]; then 
+          echo "No SQL files were added, Exiting from this action."
+          exit 0
+        fi
+
+        # Iterate through each changed SQL file
+        for filename in $(awk '/scripts\/sql\//' diff); do
+          echo "Checking File: $filename"
+          
+          # Check if the SQL file name is in the correct format (i.e., it ends with either '.up.sql' or '.down.sql')
+          if [[ "$filename" =~ \.(up|down)\.sql$ ]]; then
+
+            # Print a message that the file name is in the correct format
+            echo "File name: $filename is in the correct format"
+          else
+            # Print an error message
+            echo "Error: The SQL file name is not in the correct format: $filename."
+
+            # Post a comment on a GitHub pull request with the error message
+            gh pr comment $pr_no --body "The SQL file name: $filename is not in the correct format."
+
+            # Exit the script with a non-zero status code
+            exit 1 
+          fi
+
+          # Navigate to the SQL files directory
+          sql_dir="scripts/sql"
+          echo "Current directory: $(pwd)"
+          cd "$sql_dir"
+          echo "SQL files directory: $(pwd)"
+          
+          # Extract the migration number from the SQL file name
+          migration_no=$(echo "$filename" | cut -d "/" -f 3 | cut -d "_" -f 1)
+          echo "Migration Number: $migration_no"
+          
+          # Count the number of files with the same migration number
+          migration_files_present_of_this_no=$(ls | cut -d "_" -f 1 | grep -w -c "$migration_no")
+
+          # Navigate back to the original directory
+          cd ../..
+          
+          # Check the conditions based on the number of files with the same migration number
+          if [[ $migration_files_present_of_this_no == "2" ]]; then
+            echo "All looks good for this migration number."
+          elif [[ $migration_files_present_of_this_no == "1" ]]; then
+            # Only one file is present for this migration number
+            echo "Only single migration file was present for migration no.: $migration_no. either up or down migration is missing! EXITING"
+            gh pr comment $pr_no --body "Error: Only a single migration file was present for this number: $migration_no."
+            exit 1
+          else 
+            # Migration number is repeated
+            echo "Error: Migration number is repeated."
+            gh pr comment $pr_no --body "Error: The SQL file number: $migration_no is duplicated"
+            exit 1
+          fi
+        done
